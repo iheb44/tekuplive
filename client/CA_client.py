@@ -8,6 +8,21 @@ from datetime import datetime, timedelta
 import json
 import ldap
 
+def save_private_key(private_key, private_filename, public_filename):
+    pem_data = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    with open(private_filename, 'wb') as f:
+        f.write(pem_data)
+    public_key = private_key.public_key()
+    public_pem_data = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    with open(public_filename, 'wb') as f:
+        f.write(public_pem_data)
 def generate_certificate(private_key):
     subject = issuer = x509.Name([
         x509.NameAttribute(NameOID.COUNTRY_NAME, u"TN"),
@@ -65,8 +80,9 @@ def callback(ch, method, properties, body):
         key_size=2048,
         backend=default_backend()
     )
+    save_private_key(private_key, "private_key.pem","public_key.pem")
     cert = generate_certificate(private_key)
-    save_certificate(cert, f"{client_id}_certificate.pem")
+    save_certificate(cert, f"certificate.pem")
     client_data = json.loads(body.decode())
     store_in_ldap(cert, client_data["client_id"])
 
